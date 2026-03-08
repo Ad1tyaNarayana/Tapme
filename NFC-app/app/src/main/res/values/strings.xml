@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">NFC UPI Pay</string>
+    <string name="app_name">Tapme</string>
     <string name="nfc_service_description">UPI NFC Payment Tag</string>
     <string name="nfc_aid_description">UPI Payment</string>
 </resources>
