@@ -1,0 +1,9 @@
+{
+  "name": "tapme-upi-redirect",
+  "version": "1.0.0",
+  "description": "NFC to UPI App Chooser Redirect",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}
