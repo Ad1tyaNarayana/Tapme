@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NfcUpiPay"
+rootProject.name = "Tapme"
 include(":app")
