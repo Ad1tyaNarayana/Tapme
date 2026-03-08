@@ -8,7 +8,7 @@ object UpiDeepLinkBuilder {
      * Deploy NFC-redirect (see NFC-redirect/README.md) and replace this
      * with your own server URL before building the app.
      */
-    private const val REDIRECT_BASE_URL = "https://your-redirect-server.example.com/api"
+    private const val REDIRECT_BASE_URL = "https://your-project.vercel.app/api"
 
     /**
      * Builds a standard NPCI UPI deep link.

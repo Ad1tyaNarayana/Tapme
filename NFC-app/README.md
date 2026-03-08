@@ -97,7 +97,7 @@ The NDEF message is a single URI record containing the HTTPS redirect URL, built
 Assembles the URL sent to the redirect server:
 
 ```
-https://your-redirect-server.example.com/api
+https://your-project.vercel.app/api
   ?pa=<upi-id>
   &pn=<display-name>
   &am=<amount>        (optional)

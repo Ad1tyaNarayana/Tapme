@@ -57,7 +57,7 @@ These are based on the UPI deep link parameters.
 ### Example
 
 ```
-GET https://your-redirect-server.example.com/api?pa=aditya%40upi&pn=Aditya&am=100&tn=Lunch
+GET https://your-project.vercel.app/api?pa=aditya%40upi&pn=Aditya&am=100&tn=Lunch
 ```
 
 Redirects to:

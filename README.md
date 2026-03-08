@@ -33,7 +33,7 @@ Receiver's phone (Tapme app)          Payer's phone
 
 4. Receiver holds phone to           5. NFC chip reads the NDEF tag.
    payer's NFC antenna.                 Record contains an HTTPS URL:
-                                        https://your-redirect-server.example.com/api
+                                        https://your-project.vercel.app/api
                                         ?pa=upi@id&pn=Name&am=50&cu=INR&tn=...
 
                                      6. Android opens the URL in the
