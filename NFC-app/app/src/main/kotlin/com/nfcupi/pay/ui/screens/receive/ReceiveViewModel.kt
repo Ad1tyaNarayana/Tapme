@@ -21,6 +21,7 @@ data class ReceiveUiState(
     val amount: String = "",
     val upiId: String = "",
     val displayName: String = "",
+    val redirectBaseUrl: String = "",
     val nfcState: NfcState = NfcState.NOT_SUPPORTED,
     val hasHce: Boolean = false,
     val upiUri: String = "",
@@ -47,7 +48,11 @@ class ReceiveViewModel @Inject constructor(
         viewModelScope.launch {
             prefsRepo.userProfile.collect { profile ->
                 _uiState.update {
-                    it.copy(upiId = profile.upiId, displayName = profile.displayName)
+                    it.copy(
+                        upiId = profile.upiId,
+                        displayName = profile.displayName,
+                        redirectBaseUrl = profile.redirectBaseUrl
+                    )
                 }
             }
         }
@@ -76,12 +81,18 @@ class ReceiveViewModel @Inject constructor(
             return
         }
 
-        val uri = UpiDeepLinkBuilder.build(
-            upiId           = state.upiId,
-            payeeName       = state.displayName,
-            amount          = state.amount.ifBlank { null },
-            transactionNote = state.transactionNote.ifBlank { null }
-        )
+        val uri = try {
+            UpiDeepLinkBuilder.build(
+                redirectBaseUrl = state.redirectBaseUrl,
+                upiId = state.upiId,
+                payeeName = state.displayName,
+                amount = state.amount.ifBlank { null },
+                transactionNote = state.transactionNote.ifBlank { null }
+            )
+        } catch (_: IllegalArgumentException) {
+            _uiState.update { it.copy(errorMessage = "Configure your redirect site URL in Settings") }
+            return
+        }
 
         UpiNfcHceService.currentUpiUri = uri
         context.startService(Intent(context, UpiNfcHceService::class.java))

@@ -6,10 +6,10 @@ The Android application for Tapme. It turns the receiver's phone into a contactl
 
 ## What It Does
 
-1. The receiver enters their UPI ID and display name in **Settings**.
+1. The receiver enters their UPI ID, display name, and deployed redirect site URL in **Settings**.
 2. On the main screen they optionally set an amount and transaction note, then tap **Activate**.
 3. The app starts a background `HostApduService` that makes the phone respond to NFC readers exactly like a Type 4 NDEF tag.
-4. The NDEF record contains an HTTPS URL pointing to the Tapme redirect server, with the UPI ID and payment details encoded as query parameters.
+4. The NDEF record contains an HTTPS URL pointing to the configured redirect server, with the UPI ID and payment details encoded as query parameters.
 5. When the payer taps their phone, it reads the tag, opens the URL in a browser, and the redirect server returns a `upi://pay` deep link — triggering the native UPI app chooser.
 
 ---
@@ -23,7 +23,7 @@ app/src/main/
 │   ├── MainActivity.kt              # Entry point; manages preferred HCE service
 │   ├── NfcUpiApp.kt                 # Hilt application class
 │   ├── data/
-│   │   └── PreferencesRepository.kt # DataStore-backed UPI ID & name persistence
+│   │   └── PreferencesRepository.kt # DataStore-backed payment profile persistence
 │   ├── di/
 │   │   └── AppModule.kt             # Hilt module — provides NfcAdapter
 │   ├── nfc/
@@ -64,7 +64,7 @@ The app follows **MVVM** with unidirectional data flow, backed by Hilt for depen
 ┌────────────────────────▼────────────────────────────┐
 │                    Data Layer                        │
 │  PreferencesRepository (Jetpack DataStore)          │
-│  Persists: upi_id, display_name                     │
+│  Persists: upi_id, display_name, redirect_base_url │
 └────────────────────────┬────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────┐
@@ -94,7 +94,7 @@ The NDEF message is a single URI record containing the HTTPS redirect URL, built
 
 #### `UpiDeepLinkBuilder`
 
-Assembles the URL sent to the redirect server:
+Assembles the URL sent to the configured redirect server saved in Settings:
 
 ```
 https://your-project.vercel.app/api

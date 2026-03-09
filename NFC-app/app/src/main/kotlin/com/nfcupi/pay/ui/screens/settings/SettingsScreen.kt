@@ -59,6 +59,22 @@ fun SettingsScreen(
                 singleLine = true
             )
 
+            OutlinedTextField(
+                value = uiState.redirectSite,
+                onValueChange = viewModel::onRedirectSiteChange,
+                label = { Text("Redirect Site URL") },
+                placeholder = { Text("pay.example.com or https://pay.example.com/api") },
+                isError = uiState.redirectSiteError != null,
+                supportingText = {
+                    Text(
+                        uiState.redirectSiteError
+                            ?: "Deploy NFC-redirect and enter its domain or full /api URL."
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
             Text(
                 "This name shows on the payer's confirmation screen.",
                 style = MaterialTheme.typography.bodySmall,

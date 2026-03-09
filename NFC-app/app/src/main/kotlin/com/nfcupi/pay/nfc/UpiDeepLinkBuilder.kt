@@ -4,13 +4,6 @@ import android.net.Uri
 
 object UpiDeepLinkBuilder {
     /**
-     * Base URL of your deployed NFC-redirect server.
-     * Deploy NFC-redirect (see NFC-redirect/README.md) and replace this
-     * with your own server URL before building the app.
-     */
-    private const val REDIRECT_BASE_URL = "https://your-project.vercel.app/api"
-
-    /**
      * Builds a standard NPCI UPI deep link.
      * Format: upi://pay?pa=<upiId>&pn=<name>&am=<amount>&cu=INR&tn=<note>
      *
@@ -23,12 +16,14 @@ object UpiDeepLinkBuilder {
      * All major UPI apps handle this URI scheme natively.
      */
     fun build(
+        redirectBaseUrl: String,
         upiId: String,
         payeeName: String,
         amount: String? = null,
         transactionNote: String? = null
     ): String {
         require(upiId.contains("@")) { "Invalid UPI ID: must contain @" }
+        val normalizedRedirectBaseUrl = normalizeRedirectBaseUrl(redirectBaseUrl)
 
         val actualNote = if (!transactionNote.isNullOrBlank()) {
             transactionNote.trim()
@@ -40,7 +35,7 @@ object UpiDeepLinkBuilder {
             }
         }
 
-        var uri = "$REDIRECT_BASE_URL?pa=${Uri.encode(upiId.trim(), "@")}" +
+        var uri = "$normalizedRedirectBaseUrl?pa=${Uri.encode(upiId.trim(), "@")}" +
             "&pn=${Uri.encode(payeeName.trim().ifBlank { "Pay" })}"
 
         if (!amount.isNullOrBlank() && amount.toDoubleOrNull() != null) {
@@ -50,5 +45,38 @@ object UpiDeepLinkBuilder {
         uri += "&cu=INR&tn=${Uri.encode(actualNote)}"
 
         return uri
+    }
+
+    fun normalizeRedirectBaseUrl(input: String?): String {
+        val trimmedInput = input?.trim().orEmpty()
+        require(trimmedInput.isNotBlank()) { "Redirect URL is required" }
+
+        val withScheme = if (trimmedInput.contains("://")) {
+            trimmedInput
+        } else {
+            "https://$trimmedInput"
+        }
+
+        val parsed = Uri.parse(withScheme)
+        require(parsed.scheme == "https" || parsed.scheme == "http") {
+            "Redirect URL must use http or https"
+        }
+        require(!parsed.host.isNullOrBlank()) { "Redirect URL must include a host" }
+        require(parsed.query.isNullOrBlank()) { "Redirect URL must not include a query string" }
+        require(parsed.fragment.isNullOrBlank()) { "Redirect URL must not include a fragment" }
+
+        val normalizedPath = parsed.path
+            ?.trim()
+            ?.trimEnd('/')
+            ?.ifBlank { "/api" }
+            ?: "/api"
+
+        return parsed.buildUpon()
+            .encodedQuery(null)
+            .fragment(null)
+            .path(normalizedPath)
+            .build()
+            .toString()
+            .trimEnd('/')
     }
 }

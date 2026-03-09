@@ -96,7 +96,7 @@ NDEF tag record (https://)
 
 The Android application. Full details in [NFC-app/README.md](NFC-app/README.md).
 
-- Stores the receiver's UPI ID and display name using Jetpack DataStore.
+- Stores the receiver's UPI ID, display name, and redirect site URL using Jetpack DataStore.
 - When activated, starts a `HostApduService` that emulates a Type 4 NFC tag using the NFC Forum NDEF APDU handshake.
 - The NDEF record contains an HTTPS deep link to the redirect server, parameterised with the UPI ID, name, optional amount, and note.
 - Built with Kotlin 2.1, Compose BOM 2025.01, Hilt 2.55, min SDK 24.
@@ -134,13 +134,13 @@ vercel --prod
 
 Note the deployment URL (e.g. `https://your-project.vercel.app`).
 
-### 2. Point the Android app at your deployment
+### 2. Configure the Android app
 
-In `NFC-app/app/src/main/kotlin/com/nfcupi/pay/nfc/UpiDeepLinkBuilder.kt`, update the base URL:
+Open Tapme, go to **Settings**, and enter:
 
-```kotlin
-var uri = "https://<your-deployment>.vercel.app/api?pa=..."
-```
+- your UPI ID
+- your display name
+- your deployed redirect URL, for example `https://your-project.vercel.app/api`
 
 ### 3. Build and install the Android app
 
@@ -152,7 +152,7 @@ cd NFC-app
 ### 4. Use it
 
 1. Open Tapme on the receiver's Android phone.
-2. Go to **Settings**, enter your UPI ID (e.g. `yourname@upi`) and display name.
+2. Go to **Settings**, enter your UPI ID (e.g. `yourname@upi`), display name, and redirect URL.
 3. Back on the main screen, optionally enter an amount and note.
 4. Tap **Activate**.
 5. The receiver holds their phone against the payer's phone (back-to-back, near the NFC antenna).

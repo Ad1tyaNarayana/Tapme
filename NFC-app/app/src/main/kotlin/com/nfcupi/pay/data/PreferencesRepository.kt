@@ -16,7 +16,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore("u
 
 data class UserProfile(
     val upiId: String = "",
-    val displayName: String = ""
+    val displayName: String = "",
+    val redirectBaseUrl: String = ""
 )
 
 @Singleton
@@ -25,11 +26,13 @@ class PreferencesRepository @Inject constructor(
 ) {
     private val KEY_UPI_ID = stringPreferencesKey("upi_id")
     private val KEY_NAME   = stringPreferencesKey("display_name")
+    private val KEY_REDIRECT_BASE_URL = stringPreferencesKey("redirect_base_url")
 
     val userProfile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
         UserProfile(
-            upiId       = prefs[KEY_UPI_ID] ?: "",
-            displayName = prefs[KEY_NAME]   ?: ""
+            upiId           = prefs[KEY_UPI_ID] ?: "",
+            displayName     = prefs[KEY_NAME]   ?: "",
+            redirectBaseUrl = prefs[KEY_REDIRECT_BASE_URL] ?: ""
         )
     }
 
@@ -37,6 +40,7 @@ class PreferencesRepository @Inject constructor(
         context.dataStore.edit { prefs ->
             prefs[KEY_UPI_ID] = profile.upiId
             prefs[KEY_NAME]   = profile.displayName
+            prefs[KEY_REDIRECT_BASE_URL] = profile.redirectBaseUrl
         }
     }
 }
