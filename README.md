@@ -174,3 +174,11 @@ cd NFC-app
 - HCE emulation requires the Tapme app to be in the foreground (or set as the preferred service). If the screen locks, the emulated tag stops responding.
 - The payer must have at least one UPI-capable app installed; the chooser will be empty otherwise.
 - iOS devices cannot read HCE tags emitted by Android (Apple's NFC stack does not support this interaction).
+
+---
+
+## License
+
+This repository is licensed under the GNU Affero General Public License v3.0 or later.
+
+See [LICENSE](LICENSE) for the full text.
