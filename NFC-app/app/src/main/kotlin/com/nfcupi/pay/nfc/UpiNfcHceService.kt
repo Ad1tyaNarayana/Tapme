@@ -24,6 +24,7 @@ class UpiNfcHceService : HostApduService() {
 
     companion object {
         private const val TAG = "UpiNfcHceService"
+        const val ACTION_SESSION_CONSUMED = "com.nfcupi.pay.action.NFC_SESSION_CONSUMED"
 
         // Standard NDEF Tag Application AID
         private val NDEF_AID = byteArrayOf(
@@ -46,8 +47,10 @@ class UpiNfcHceService : HostApduService() {
 
     private var selectedFileId: ByteArray? = null
     private var ndefMessageBytes: ByteArray = byteArrayOf()
+    private var hasServedNdefPayload = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        hasServedNdefPayload = false
         ndefMessageBytes = NdefBuilder.buildNdefMessage(currentUpiUri)
         Log.d(TAG, "HCE ready. URI: $currentUpiUri | NDEF bytes: ${ndefMessageBytes.size}")
         return super.onStartCommand(intent, flags, startId)
@@ -89,6 +92,7 @@ class UpiNfcHceService : HostApduService() {
                 buildCapabilityContainer(ndefMessageBytes.size).slice(offset, length)
             }
             selectedFileId.contentEq(NDEF_FILE_ID) -> {
+                hasServedNdefPayload = true
                 // Prefix NDEF message with 2-byte length (Type 4 Tag spec)
                 val len = ndefMessageBytes.size
                 val withLen = byteArrayOf(
@@ -119,6 +123,15 @@ class UpiNfcHceService : HostApduService() {
 
     override fun onDeactivated(reason: Int) {
         selectedFileId = null
+
+        if (hasServedNdefPayload) {
+            hasServedNdefPayload = false
+            currentUpiUri = ""
+            ndefMessageBytes = byteArrayOf()
+            sendBroadcast(Intent(ACTION_SESSION_CONSUMED).setPackage(packageName))
+            stopSelf()
+        }
+
         Log.d(TAG, "HCE deactivated (reason=$reason)")
     }
 

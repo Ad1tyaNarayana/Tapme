@@ -20,7 +20,8 @@ object UpiDeepLinkBuilder {
         upiId: String,
         payeeName: String,
         amount: String? = null,
-        transactionNote: String? = null
+        transactionNote: String? = null,
+        transactionReference: String? = null
     ): String {
         require(upiId.contains("@")) { "Invalid UPI ID: must contain @" }
         val normalizedRedirectBaseUrl = normalizeRedirectBaseUrl(redirectBaseUrl)
@@ -43,6 +44,10 @@ object UpiDeepLinkBuilder {
         }
 
         uri += "&cu=INR&tn=${Uri.encode(actualNote)}"
+
+        if (!transactionReference.isNullOrBlank()) {
+            uri += "&tr=${Uri.encode(transactionReference.trim())}"
+        }
 
         return uri
     }

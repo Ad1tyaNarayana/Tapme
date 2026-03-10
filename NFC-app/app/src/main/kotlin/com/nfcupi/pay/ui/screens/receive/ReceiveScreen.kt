@@ -141,6 +141,14 @@ fun ReceiveScreen(
                 Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
             }
 
+            uiState.statusMessage?.let {
+                Text(
+                    it,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center
+                )
+            }
+
             // Debug: show URI in dev builds (remove before shipping)
             if (uiState.isActive && uiState.upiUri.isNotBlank()) {
                 Text(

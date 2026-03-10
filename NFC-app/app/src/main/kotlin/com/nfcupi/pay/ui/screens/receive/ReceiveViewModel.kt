@@ -1,7 +1,10 @@
 package com.nfcupi.pay.ui.screens.receive
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nfcupi.pay.data.PreferencesRepository
@@ -26,6 +29,7 @@ data class ReceiveUiState(
     val hasHce: Boolean = false,
     val upiUri: String = "",
     val transactionNote: String = "",
+    val statusMessage: String? = null,
     val errorMessage: String? = null
 )
 
@@ -38,7 +42,27 @@ class ReceiveViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ReceiveUiState())
     val uiState: StateFlow<ReceiveUiState> = _uiState.asStateFlow()
 
+    private val sessionConsumedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == UpiNfcHceService.ACTION_SESSION_CONSUMED) {
+                handleSessionConsumed()
+            }
+        }
+    }
+
     init {
+        val sessionConsumedFilter = IntentFilter(UpiNfcHceService.ACTION_SESSION_CONSUMED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(
+                sessionConsumedReceiver,
+                sessionConsumedFilter,
+                Context.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            context.registerReceiver(sessionConsumedReceiver, sessionConsumedFilter)
+        }
+
         _uiState.update {
             it.copy(
                 nfcState = getNfcState(context),
@@ -61,12 +85,12 @@ class ReceiveViewModel @Inject constructor(
     fun onAmountChange(amount: String) {
         // Validate: digits only, max 6 digits, optional 2 decimal places
         if (amount.isEmpty() || amount.matches(Regex("^\\d{0,6}(\\.\\d{0,2})?\$"))) {
-            _uiState.update { it.copy(amount = amount, errorMessage = null) }
+            _uiState.update { it.copy(amount = amount, errorMessage = null, statusMessage = null) }
         }
     }
 
     fun onTransactionNoteChange(note: String) {
-        _uiState.update { it.copy(transactionNote = note) }
+        _uiState.update { it.copy(transactionNote = note, statusMessage = null) }
     }
 
     fun activateNfc() {
@@ -87,7 +111,8 @@ class ReceiveViewModel @Inject constructor(
                 upiId = state.upiId,
                 payeeName = state.displayName,
                 amount = state.amount.ifBlank { null },
-                transactionNote = state.transactionNote.ifBlank { null }
+                transactionNote = state.transactionNote.ifBlank { null },
+                transactionReference = generateTransactionReference()
             )
         } catch (_: IllegalArgumentException) {
             _uiState.update { it.copy(errorMessage = "Configure your redirect site URL in Settings") }
@@ -96,17 +121,38 @@ class ReceiveViewModel @Inject constructor(
 
         UpiNfcHceService.currentUpiUri = uri
         context.startService(Intent(context, UpiNfcHceService::class.java))
-        _uiState.update { it.copy(isActive = true, upiUri = uri, errorMessage = null) }
+        _uiState.update {
+            it.copy(
+                isActive = true,
+                upiUri = uri,
+                statusMessage = null,
+                errorMessage = null
+            )
+        }
     }
 
     fun deactivateNfc() {
         context.stopService(Intent(context, UpiNfcHceService::class.java))
         UpiNfcHceService.currentUpiUri = ""
-        _uiState.update { it.copy(isActive = false, upiUri = "") }
+        _uiState.update { it.copy(isActive = false, upiUri = "", statusMessage = null) }
     }
 
     override fun onCleared() {
+        context.unregisterReceiver(sessionConsumedReceiver)
         super.onCleared()
         deactivateNfc()
     }
+
+    private fun handleSessionConsumed() {
+        _uiState.update {
+            it.copy(
+                isActive = false,
+                upiUri = "",
+                statusMessage = "Tap complete. Press Activate NFC Tag again for the next payment.",
+                errorMessage = null
+            )
+        }
+    }
+
+    private fun generateTransactionReference(): String = "TM${System.currentTimeMillis()}"
 }
