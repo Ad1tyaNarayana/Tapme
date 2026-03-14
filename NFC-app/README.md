@@ -1,18 +1,24 @@
 # NFC-app
 
-The Android application for Tapme. It turns the receiver's phone into a contactless NFC POS terminal by emulating a physical NFC tag using Android's Host Card Emulation (HCE) API.
+The Android app for Tapme. It lets a receiver start a UPI payment session from their phone using NFC tag emulation, with QR as a fallback.
 
----
+## Feature Summary
 
-## What It Does
+- saves a receiver profile with UPI ID and display name
+- generates a standard `upi://pay` deep link
+- broadcasts that deep link through Android Host Card Emulation
+- renders the same payment session as a QR code
+- stores local transaction history
+- supports optional notification-based transaction tracking
 
-1. The receiver enters their UPI ID, display name, and deployed redirect site URL in **Settings**.
-2. On the main screen they optionally set an amount and transaction note, then tap **Activate**.
-3. The app starts a background `HostApduService` that makes the phone respond to NFC readers exactly like a Type 4 NDEF tag.
-4. The NDEF record contains an HTTPS URL pointing to the configured redirect server, with the UPI ID and payment details encoded as query parameters.
-5. When the payer taps their phone, it reads the tag, opens the URL in a browser, and the redirect server returns a `upi://pay` deep link — triggering the native UPI app chooser.
+## User Flow
 
----
+1. Open Settings and save a UPI ID plus display name.
+2. Enter an optional amount and note on the receive screen.
+3. Tap Generate.
+4. The app arms an NFC session and shows a QR code.
+5. The payer either taps over NFC or scans the QR code.
+6. Tapme records the initiated session locally as Pending.
 
 ## Project Structure
 
@@ -20,157 +26,101 @@ The Android application for Tapme. It turns the receiver's phone into a contactl
 app/src/main/
 ├── AndroidManifest.xml
 ├── kotlin/com/nfcupi/pay/
-│   ├── MainActivity.kt              # Entry point; manages preferred HCE service
-│   ├── NfcUpiApp.kt                 # Hilt application class
+│   ├── MainActivity.kt
+│   ├── NfcUpiApp.kt
 │   ├── data/
-│   │   └── PreferencesRepository.kt # DataStore-backed payment profile persistence
+│   │   ├── PreferencesRepository.kt
+│   │   └── TransactionHistoryRepository.kt
 │   ├── di/
-│   │   └── AppModule.kt             # Hilt module — provides NfcAdapter
+│   │   └── AppModule.kt
 │   ├── nfc/
-│   │   ├── NdefBuilder.kt           # Converts a URI string → raw NDEF byte array
-│   │   ├── UpiDeepLinkBuilder.kt    # Assembles the HTTPS redirect URL
-│   │   └── UpiNfcHceService.kt      # Core HCE service; handles APDU handshake
+│   │   ├── NdefBuilder.kt
+│   │   ├── UpiDeepLinkBuilder.kt
+│   │   └── UpiNfcHceService.kt
+│   ├── notifications/
+│   │   └── TransactionNotificationListenerService.kt
 │   ├── ui/
+│   │   ├── components/
+│   │   │   └── QrCodeImage.kt
 │   │   ├── navigation/
-│   │   │   └── AppNavGraph.kt       # Compose Navigation graph
+│   │   │   └── AppNavGraph.kt
 │   │   ├── screens/
 │   │   │   ├── receive/
-│   │   │   │   ├── ReceiveScreen.kt     # Main screen (activate / amount / note)
-│   │   │   │   └── ReceiveViewModel.kt  # UI state, HCE lifecycle
 │   │   │   └── settings/
-│   │   │       ├── SettingsScreen.kt    # UPI ID & display name form
-│   │   │       └── SettingsViewModel.kt # Validates and saves profile
-│   │   └── theme/                   # Material 3 theme
+│   │   └── theme/
 │   └── util/
-│       └── NfcAvailability.kt       # NFC / HCE capability checks
-└── res/
-    └── xml/
-        └── apduservice.xml          # Declares the NDEF AID for HCE routing
+│       └── NfcAvailability.kt
+└── res/xml/apduservice.xml
 ```
-
----
 
 ## Architecture
 
-The app follows **MVVM** with unidirectional data flow, backed by Hilt for dependency injection.
+The app uses MVVM with Hilt, StateFlow, and Jetpack Compose.
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                      UI Layer                        │
-│  ReceiveScreen ◄──► ReceiveViewModel                │
-│  SettingsScreen ◄──► SettingsViewModel              │
-└────────────────────────┬────────────────────────────┘
-                         │ StateFlow<UiState>
-┌────────────────────────▼────────────────────────────┐
-│                    Data Layer                        │
-│  PreferencesRepository (Jetpack DataStore)          │
-│  Persists: upi_id, display_name, redirect_base_url │
-└────────────────────────┬────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────┐
-│                     NFC Layer                        │
-│  UpiDeepLinkBuilder   builds https:// redirect URL  │
-│  NdefBuilder          encodes URL → NDEF bytes       │
-│  UpiNfcHceService     HostApduService (HCE)          │
-│    └─ handles APDU sequence per NFC Forum Type 4 Tag │
-└─────────────────────────────────────────────────────┘
+UI
+ReceiveScreen <-> ReceiveViewModel
+SettingsScreen <-> SettingsViewModel
+
+Data
+PreferencesRepository
+TransactionHistoryRepository
+
+NFC
+UpiDeepLinkBuilder -> NdefBuilder -> UpiNfcHceService
 ```
 
-### Key Components
+### Important pieces
 
-#### `UpiNfcHceService`
+- `UpiDeepLinkBuilder` creates a standard `upi://pay` URI
+- `NdefBuilder` wraps the URI into an NDEF message
+- `UpiNfcHceService` exposes that NDEF payload through HCE
+- `ReceiveViewModel` manages session arming, transaction creation, and history state
+- `SettingsViewModel` validates and saves the receiver profile
 
-The heart of the app. Extends `HostApduService` and implements the NFC Forum Type 4 Tag APDU handshake:
+## Payment Payload
 
-| Step | Command                                     | Response                             |
-| ---- | ------------------------------------------- | ------------------------------------ |
-| 1    | SELECT AID (`D2760000850101`)               | `90 00` (OK)                         |
-| 2    | SELECT FILE — Capability Container (`E103`) | `90 00`                              |
-| 3    | READ BINARY — CC                            | Returns 15-byte capability container |
-| 4    | SELECT FILE — NDEF (`E104`)                 | `90 00`                              |
-| 5    | READ BINARY — NDEF                          | Returns 2-byte length + NDEF message |
-
-The NDEF message is a single URI record containing the HTTPS redirect URL, built fresh each time the service starts.
-
-#### `UpiDeepLinkBuilder`
-
-Assembles the URL sent to the configured redirect server saved in Settings:
+The app generates a standard NPCI-style deep link:
 
 ```
-https://your-project.vercel.app/api
+upi://pay
   ?pa=<upi-id>
   &pn=<display-name>
-  &am=<amount>        (optional)
+  &am=<amount>
   &cu=INR
   &tn=<note>
+  &tr=<transaction-reference>
 ```
 
-#### `NdefBuilder`
+That same payload is used for both NFC and QR.
 
-Wraps the URL in a standard `NdefRecord.createUri()` record and serialises the `NdefMessage` to a raw byte array ready for HCE transmission.
+## Build And Run
 
-#### `PreferencesRepository`
-
-Wraps Jetpack DataStore. Exposes a `Flow<UserProfile>` and a `suspend fun saveProfile(profile)`. Both the Receive and Settings ViewModels inject this repository via Hilt.
-
-#### `MainActivity`
-
-Calls `CardEmulation.setPreferredService()` in `onResume` and `unsetPreferredService()` in `onPause` to ensure Tapme's HCE service takes priority over other card emulation apps while the screen is on.
-
----
-
-## Tech Stack
-
-| Library                     | Version    | Purpose                        |
-| --------------------------- | ---------- | ------------------------------ |
-| Kotlin                      | 2.1.10     | Language                       |
-| Jetpack Compose BOM         | 2025.01.01 | UI toolkit                     |
-| Material 3                  | via BOM    | Design system                  |
-| Navigation Compose          | 2.8.6      | Screen navigation              |
-| Hilt                        | 2.55       | Dependency injection           |
-| Hilt Navigation Compose     | 1.2.0      | ViewModel injection in Compose |
-| Lifecycle ViewModel Compose | 2.8.7      | `collectAsStateWithLifecycle`  |
-| DataStore Preferences       | —          | Persistent key-value storage   |
-| Android Gradle Plugin       | 8.13.2     | Build tooling                  |
-
-**Min SDK:** 24 (Android 7.0)  
-**Target SDK:** 35 (Android 15)
-
----
-
-## Building
-
-**Debug build:**
+### Debug build
 
 ```bash
 ./gradlew assembleDebug
 ```
 
-**Install on connected device:**
+### Install on device
 
 ```bash
 ./gradlew installDebug
 ```
 
-**Release build** (requires a signing config in `local.properties` or `build.gradle.kts`):
+### Release build
 
 ```bash
 ./gradlew assembleRelease
 ```
 
----
-
 ## Device Requirements
 
-- Android 7.0 or later (API 24+)
-- NFC chip with **Host Card Emulation (HCE)** support
-  - Most mid-range and flagship Android phones since ~2015 qualify
-  - Budget/entry-level devices occasionally omit HCE even when they have NFC
-- NFC must be enabled in system settings
+- Android 7.0 or later
+- NFC enabled
+- Host Card Emulation support on the receiver device
 
-The app checks NFC availability at runtime and shows a banner if NFC is off or unsupported.
-
----
+The app checks availability at runtime and shows warnings when NFC or HCE is unavailable.
 
 ## Permissions
 
@@ -180,12 +130,27 @@ The app checks NFC availability at runtime and shows a banner if NFC is off or u
 <uses-feature android:name="android.hardware.nfc.hce" android:required="false" />
 ```
 
-Both NFC features are marked `required="false"` so the app can be installed on non-NFC devices; it degrades gracefully with an in-app warning.
+Notification access is optional. It improves transaction status tracking but is not required to use the app.
 
----
+## Notes And Limitations
 
-## Notes & Limitations
+- The app currently uses a direct `upi://pay` NFC payload.
+- NFC tap behavior depends on how the payer's phone and installed UPI apps handle NFC-discovered URIs.
+- QR fallback is the reliable cross-device fallback and is part of the normal product flow.
+- HCE only remains active while the app is foregrounded.
 
-- The HCE service is only active while `MainActivity` is in the foreground. Locking the screen or switching apps stops emulation.
-- The emulated tag uses the standard NDEF AID (`D276000085010100`), which all modern Android NFC readers recognise.
-- Because the payload is an HTTPS URL (not a raw `upi://` URI), the payer's phone opens a browser to follow the redirect — there is a brief ~100–300 ms network round-trip before the UPI chooser appears.
+## Contributing To The Android App
+
+Useful areas for contribution:
+
+- device compatibility testing
+- better error handling around NFC state and payment handoff
+- Compose UI and accessibility improvements
+- transaction history and notification parsing improvements
+- documentation updates
+
+Before opening a PR, run:
+
+```bash
+./gradlew assembleDebug
+```

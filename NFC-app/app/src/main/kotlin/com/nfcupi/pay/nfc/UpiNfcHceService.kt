@@ -33,7 +33,7 @@ class UpiNfcHceService : HostApduService() {
         )
 
         private val SELECT_OK_SW   = byteArrayOf(0x90.toByte(), 0x00.toByte())
-        private val UNKNOWN_CMD_SW = byteArrayOf(0x00.toByte(), 0x00.toByte())
+        private val UNKNOWN_CMD_SW = byteArrayOf(0x6D.toByte(), 0x00.toByte()) // INS not supported
         private val FILE_NOT_FOUND = byteArrayOf(0x6A.toByte(), 0x82.toByte())
 
         // File IDs for NDEF tag structure (Type 4 Tag spec)

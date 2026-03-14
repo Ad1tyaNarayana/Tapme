@@ -5,83 +5,48 @@ import android.net.Uri
 object UpiDeepLinkBuilder {
     /**
      * Builds a standard NPCI UPI deep link.
-     * Format: upi://pay?pa=<upiId>&pn=<name>&am=<amount>&cu=INR&tn=<note>
+     * Format: upi://pay?pa=<upiId>&pn=<name>&am=<amount>&cu=INR&tn=<note>&tr=<ref>
      *
      * pa = payee address (UPI ID)
      * pn = payee name (shown on payment screen)
      * am = amount (if null, payer's app shows amount input field)
      * cu = currency (always INR)
      * tn = transaction note
-     *
-     * All major UPI apps handle this URI scheme natively.
+     * tr = transaction reference (ties the UPI transaction to our internal record)
      */
     fun build(
-        redirectBaseUrl: String,
         upiId: String,
         payeeName: String,
+        transactionReference: String,
         amount: String? = null,
-        transactionNote: String? = null,
-        transactionReference: String? = null
+        transactionNote: String? = null
     ): String {
         require(upiId.contains("@")) { "Invalid UPI ID: must contain @" }
-        val normalizedRedirectBaseUrl = normalizeRedirectBaseUrl(redirectBaseUrl)
+        val resolvedPayeeName = payeeName.trim().ifBlank { "Pay" }
 
         val actualNote = if (!transactionNote.isNullOrBlank()) {
             transactionNote.trim()
         } else {
             if (amount != null) {
-                "Tapme Payment of $amount to $payeeName"
+                "Tapme Payment of $amount to $resolvedPayeeName"
             } else {
-                "Tapme Payment to $payeeName"
+                "Tapme Payment to $resolvedPayeeName"
             }
         }
 
-        var uri = "$normalizedRedirectBaseUrl?pa=${Uri.encode(upiId.trim(), "@")}" +
-            "&pn=${Uri.encode(payeeName.trim().ifBlank { "Pay" })}"
+        val encodedParams = mutableListOf(
+            "pa=${Uri.encode(upiId.trim(), "@")}",
+            "pn=${Uri.encode(resolvedPayeeName)}"
+        )
 
         if (!amount.isNullOrBlank() && amount.toDoubleOrNull() != null) {
-            uri += "&am=${Uri.encode(amount.trim())}"
+            encodedParams += "am=${Uri.encode(amount.trim())}"
         }
 
-        uri += "&cu=INR&tn=${Uri.encode(actualNote)}"
+        encodedParams += "cu=INR"
+        encodedParams += "tn=${Uri.encode(actualNote)}"
+        encodedParams += "tr=${Uri.encode(transactionReference)}"
 
-        if (!transactionReference.isNullOrBlank()) {
-            uri += "&tr=${Uri.encode(transactionReference.trim())}"
-        }
-
-        return uri
-    }
-
-    fun normalizeRedirectBaseUrl(input: String?): String {
-        val trimmedInput = input?.trim().orEmpty()
-        require(trimmedInput.isNotBlank()) { "Redirect URL is required" }
-
-        val withScheme = if (trimmedInput.contains("://")) {
-            trimmedInput
-        } else {
-            "https://$trimmedInput"
-        }
-
-        val parsed = Uri.parse(withScheme)
-        require(parsed.scheme == "https" || parsed.scheme == "http") {
-            "Redirect URL must use http or https"
-        }
-        require(!parsed.host.isNullOrBlank()) { "Redirect URL must include a host" }
-        require(parsed.query.isNullOrBlank()) { "Redirect URL must not include a query string" }
-        require(parsed.fragment.isNullOrBlank()) { "Redirect URL must not include a fragment" }
-
-        val normalizedPath = parsed.path
-            ?.trim()
-            ?.trimEnd('/')
-            ?.ifBlank { "/api" }
-            ?: "/api"
-
-        return parsed.buildUpon()
-            .encodedQuery(null)
-            .fragment(null)
-            .path(normalizedPath)
-            .build()
-            .toString()
-            .trimEnd('/')
+        return "upi://pay?${encodedParams.joinToString("&")}"
     }
 }
