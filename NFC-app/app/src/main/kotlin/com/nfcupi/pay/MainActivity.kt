@@ -22,8 +22,12 @@ class MainActivity : ComponentActivity() {
             val nfcAdapter = android.nfc.NfcAdapter.getDefaultAdapter(this)
             if (nfcAdapter != null) {
                 val cardEmulation = android.nfc.cardemulation.CardEmulation.getInstance(nfcAdapter)
-                val componentName = android.content.ComponentName(this, com.nfcupi.pay.nfc.UpiNfcHceService::class.java)
-                cardEmulation.setPreferredService(this, componentName)
+                if (com.nfcupi.pay.nfc.UpiNfcHceService.currentUpiUri.isNotBlank()) {
+                    val componentName = android.content.ComponentName(this, com.nfcupi.pay.nfc.UpiNfcHceService::class.java)
+                    cardEmulation.setPreferredService(this, componentName)
+                } else {
+                    cardEmulation.unsetPreferredService(this)
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()

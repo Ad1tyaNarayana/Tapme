@@ -1,16 +1,41 @@
 package com.nfcupi.pay.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val Dark = darkColorScheme(primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80)
-private val Light = lightColorScheme(primary = Purple40, secondary = PurpleGrey40, tertiary = Pink40)
+private val TapmeColorScheme = darkColorScheme(
+    primary              = TapmeOrange,
+    onPrimary            = TapmeBackground,
+    primaryContainer     = TapmeOrangeBg,
+    onPrimaryContainer   = TapmeOrange,
+    secondary            = TapmeMuted,
+    onSecondary          = TapmeText,
+    secondaryContainer   = TapmeSurface2,
+    onSecondaryContainer = TapmeText,
+    tertiary             = TapmeMuted2,
+    onTertiary           = TapmeText,
+    tertiaryContainer    = TapmeBorder,
+    onTertiaryContainer  = TapmeText,
+    background           = TapmeBackground,
+    onBackground         = TapmeText,
+    surface              = TapmeSurface,
+    onSurface            = TapmeText,
+    surfaceVariant       = TapmeSurface2,
+    onSurfaceVariant     = TapmeMuted,
+    outline              = TapmeBorder,
+    outlineVariant       = TapmeMuted3,
+    error                = TapmeError,
+    onError              = TapmeBackground,
+    errorContainer       = TapmeError.copy(alpha = 0.12f),
+    onErrorContainer     = TapmeError,
+)
 
 @Composable
-fun NfcUpiTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val colorScheme = if (darkTheme) Dark else Light
-    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+fun NfcUpiTheme(content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = TapmeColorScheme,
+        typography = Typography,
+        content = content,
+    )
 }

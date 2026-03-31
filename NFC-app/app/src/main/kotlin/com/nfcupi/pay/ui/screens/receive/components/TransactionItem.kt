@@ -1,33 +1,41 @@
 package com.nfcupi.pay.ui.screens.receive.components
 
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nfcupi.pay.data.TransactionRecord
 import com.nfcupi.pay.data.TransactionStatus
+import com.nfcupi.pay.ui.theme.Mono
+import com.nfcupi.pay.ui.theme.TapmeBorder
+import com.nfcupi.pay.ui.theme.TapmeError
+import com.nfcupi.pay.ui.theme.TapmeMuted2
+import com.nfcupi.pay.ui.theme.TapmeMuted3
+import com.nfcupi.pay.ui.theme.TapmeOrange
+import com.nfcupi.pay.ui.theme.TapmeText
 import java.text.DateFormat
 import java.util.Date
 
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
+private val ColorSuccess = Color(0xFF4ADE80)
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TransactionItem(
     transaction: TransactionRecord,
@@ -36,103 +44,146 @@ fun TransactionItem(
     onMarkPending: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when (transaction.status) {
-                TransactionStatus.SUCCESS -> MaterialTheme.colorScheme.surfaceVariant
-                TransactionStatus.FAILED -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                TransactionStatus.PENDING -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-            }
+    val accentColor = when (transaction.status) {
+        TransactionStatus.SUCCESS -> ColorSuccess
+        TransactionStatus.FAILED  -> TapmeError
+        TransactionStatus.PENDING -> TapmeOrange
+    }
+
+    Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+        // Left accent bar
+        Box(
+            modifier = Modifier
+                .width(2.dp)
+                .fillMaxHeight()
+                .background(accentColor.copy(alpha = 0.55f))
         )
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            // Amount + status tag
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                StatusBadge(status = transaction.status)
+                Text(
+                    "₹${transaction.amount.ifBlank { "—" }}",
+                    fontFamily = Mono,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TapmeText
+                )
+                StatusTag(transaction.status)
             }
-            Spacer(Modifier.height(4.dp))
-            TransactionSummary(transaction = transaction)
+            // Note
+            if (transaction.note.isNotBlank()) {
+                Text(
+                    transaction.note,
+                    fontFamily = Mono,
+                    fontSize = 10.sp,
+                    color = TapmeMuted2,
+                    lineHeight = 15.sp
+                )
+            }
+            // Timestamp
+            Text(
+                formatTimestamp(transaction.initiatedAt),
+                fontFamily = Mono,
+                fontSize = 9.sp,
+                color = TapmeMuted3
+            )
+            // Status note
             if (transaction.statusNote.isNotBlank()) {
                 Text(
                     transaction.statusNote,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp)
+                    fontFamily = Mono,
+                    fontSize = 9.sp,
+                    color = TapmeMuted3,
+                    lineHeight = 14.sp
                 )
             }
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+            // Actions
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (transaction.status != TransactionStatus.SUCCESS) {
-                    TextButton(onClick = onMarkSuccess) { Text("Success", fontSize = 12.sp) }
+                    Text(
+                        "success",
+                        fontFamily = Mono,
+                        fontSize = 9.sp,
+                        color = ColorSuccess,
+                        modifier = Modifier.clickable { onMarkSuccess() }
+                    )
                 }
                 if (transaction.status != TransactionStatus.FAILED) {
-                    TextButton(onClick = onMarkFailed) { Text("Failed", fontSize = 12.sp) }
+                    Text(
+                        "failed",
+                        fontFamily = Mono,
+                        fontSize = 9.sp,
+                        color = TapmeError,
+                        modifier = Modifier.clickable { onMarkFailed() }
+                    )
                 }
                 if (transaction.status != TransactionStatus.PENDING) {
-                    TextButton(onClick = onMarkPending) { Text("Pending", fontSize = 12.sp) }
+                    Text(
+                        "pending",
+                        fontFamily = Mono,
+                        fontSize = 9.sp,
+                        color = TapmeOrange,
+                        modifier = Modifier.clickable { onMarkPending() }
+                    )
                 }
-                TextButton(onClick = onDelete) {
-                    Text("Delete", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
-                }
+                Text(
+                    "delete",
+                    fontFamily = Mono,
+                    fontSize = 9.sp,
+                    color = TapmeMuted3,
+                    modifier = Modifier.clickable { onDelete() }
+                )
             }
         }
     }
+    HorizontalDivider(color = TapmeBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
 }
 
 @Composable
 fun TransactionSummary(transaction: TransactionRecord) {
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text(
-            "₹${transaction.amount}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.ExtraBold
+            "₹${transaction.amount.ifBlank { "—" }}",
+            fontFamily = Mono,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TapmeText
         )
         if (transaction.note.isNotBlank()) {
-            Text(
-                transaction.note,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text(transaction.note, fontFamily = Mono, fontSize = 10.sp, color = TapmeMuted2)
         }
-        Spacer(Modifier.height(4.dp))
         Text(
-            "Started ${formatTimestamp(transaction.initiatedAt)} • Updated ${formatTimestamp(transaction.lastUpdatedAt)}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            "started ${formatTimestamp(transaction.initiatedAt)}",
+            fontFamily = Mono,
+            fontSize = 9.sp,
+            color = TapmeMuted3
         )
     }
 }
 
 @Composable
-fun StatusBadge(status: TransactionStatus) {
-    val containerColor = when (status) {
-        TransactionStatus.SUCCESS -> MaterialTheme.colorScheme.primaryContainer
-        TransactionStatus.FAILED -> MaterialTheme.colorScheme.errorContainer
-        TransactionStatus.PENDING -> MaterialTheme.colorScheme.secondaryContainer
+fun StatusTag(status: TransactionStatus) {
+    val (color, label) = when (status) {
+        TransactionStatus.SUCCESS -> Pair(ColorSuccess, "success")
+        TransactionStatus.FAILED  -> Pair(TapmeError,   "failed")
+        TransactionStatus.PENDING -> Pair(TapmeOrange,  "pending")
     }
-    val contentColor = when (status) {
-        TransactionStatus.SUCCESS -> MaterialTheme.colorScheme.onPrimaryContainer
-        TransactionStatus.FAILED -> MaterialTheme.colorScheme.onErrorContainer
-        TransactionStatus.PENDING -> MaterialTheme.colorScheme.onSecondaryContainer
-    }
-
-    Surface(color = containerColor, shape = CircleShape) {
-        Text(
-            text = status.name.lowercase().replaceFirstChar { it.uppercase() },
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            color = contentColor,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
+    Text(
+        "[$label]",
+        fontFamily = Mono,
+        fontSize = 9.sp,
+        color = color.copy(alpha = 0.85f)
+    )
 }
 
 fun formatTimestamp(timestamp: Long): String {

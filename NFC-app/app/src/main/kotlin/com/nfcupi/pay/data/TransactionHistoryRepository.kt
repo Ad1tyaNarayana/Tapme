@@ -1,10 +1,6 @@
 package com.nfcupi.pay.data
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.provider.Telephony
-import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -346,35 +342,73 @@ private object TransactionSignalParser {
         "net.one97.paytm",                         // Paytm
         "in.org.npci.upiapp",                      // BHIM
         "in.amazon.mShop.android.shopping",        // Amazon Pay
-        "com.axis.mobile",                         // Axis Mobile Banking
-        "com.csam.icici.bank.imobile",             // ICICI iMobile
+        "com.whatsapp",                            // WhatsApp Pay
+        "com.airtel.money",                        // Airtel Thanks / Payments Bank
+        "com.airtelfinance.android",               // Airtel Finance
+        // Axis Bank
+        "com.axis.mobile",
+        "com.upi.axispayhilite",                   // Axis Pay Lite
+        // ICICI
+        "com.csam.icici.bank.imobile",             // iMobile Pay
+        "com.icicibank.pockets",                   // ICICI Pockets
+        // SBI
         "com.sbi.SBIFreedomPlus",                  // SBI YONO
+        "com.sbi.yonobusiness",                    // YONO Business
+        "com.sbi.lotusintouch",                    // SBI Anywhere Personal
+        // HDFC
         "com.snapwork.hdfc",                       // HDFC MobileBanking
+        "net.hdfcbank.hdfcbankmobilebanking",      // HDFC Bank MobileBanking
+        // Kotak
         "com.kotak.mobile.kotak811",               // Kotak 811
+        "com.kotak.mobile",                        // Kotak Banking
+        // Others
         "com.freecharge.android",                  // Freecharge
         "com.mobikwik_new",                        // MobiKwik
         "com.dreamplug.androidapp",                // CRED
         "in.juspay.hyperpaysdk",                   // JusPay
+        "com.yesbank.android.mobile.banking",      // Yes Bank
+        "com.rbl.mobile.banking",                  // RBL Bank
+        "com.idbi.mobilebanking",                  // IDBI Bank
+        "com.bob.mobile",                          // Bank of Baroda
+        "com.pnbmobile",                           // PNB Mobile Banking
+        "com.canara.mob",                          // Canara Bank
+        "com.itmsl.iobmobile",                     // Indian Bank
     )
 
     private val amountRegex = Regex("(?:₹|rs\\.?|inr)\\s*([0-9]+(?:\\.[0-9]{1,2})?)", RegexOption.IGNORE_CASE)
     private val successKeywords = listOf(
+        // Generic
         "received",
         "credited",
         "successful",
         "successfully",
-        "payment received",
+        // Google Pay / PhonePe specific
         "collect request completed",
+        "collect request accepted",
         "money received",
-        "amount received",
-        "transaction complete",
-        "transfer complete",
-        "payment complete",
-        "payment done",
-        "payment success",
+        "money transferred",
+        "transfer received",
         "transfer successful",
         "sent successfully",
-        "transaction successful"
+        "payment received",
+        "payment successful",
+        "payment success",
+        "payment complete",
+        "payment done",
+        "amount received",
+        "amount credited",
+        // Transaction completion
+        "transaction successful",
+        "transaction complete",
+        "transaction completed",
+        "transfer complete",
+        "transfer completed",
+        // Bank-style confirmations
+        "has been credited",
+        "is credited",
+        "credit alert",
+        "money added",
+        "added to your"
     )
     private val failedKeywords = listOf(
         "failed",
@@ -383,20 +417,29 @@ private object TransactionSignalParser {
         "unsuccessful",
         "reversed",
         "cancelled",
+        "canceled",
         "timed out",
         "timeout",
         "transaction failed",
         "payment failed",
+        "transfer failed",
         "could not process",
         "not processed",
-        "transaction declined"
+        "transaction declined",
+        "collect request declined",
+        "collect request rejected",
+        "collect request expired",
+        "payment rejected",
+        "debit failed"
     )
     private val pendingKeywords = listOf(
         "pending",
         "processing",
         "in progress",
         "initiated",
-        "awaiting"
+        "awaiting",
+        "collect request sent",
+        "request sent"
     )
 
     fun fromNotification(

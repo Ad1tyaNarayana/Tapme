@@ -6,62 +6,72 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.nfcupi.pay.ui.theme.TapmeOrange
 
 @Composable
 fun PulseAnimation() {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.18f,
+    val infiniteTransition = rememberInfiniteTransition(label = "nfc_pulse")
+
+    val alpha1 by infiniteTransition.animateFloat(
+        initialValue = 0.95f, targetValue = 0.25f,
         animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = EaseInOut),
+            animation = tween(900, delayMillis = 0, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale"
+        ), label = "a1"
+    )
+    val alpha2 by infiniteTransition.animateFloat(
+        initialValue = 0.55f, targetValue = 0.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, delayMillis = 180, easing = EaseInOut),
+            repeatMode = RepeatMode.Reverse
+        ), label = "a2"
+    )
+    val alpha3 by infiniteTransition.animateFloat(
+        initialValue = 0.22f, targetValue = 0.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, delayMillis = 360, easing = EaseInOut),
+            repeatMode = RepeatMode.Reverse
+        ), label = "a3"
     )
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(160.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(160.dp)
-                    .scale(scale)
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f), CircleShape)
-            )
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(120.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-            ) {
-                Text("📡", fontSize = 42.sp)
-            }
+    Canvas(modifier = Modifier.size(width = 160.dp, height = 80.dp)) {
+        val cx = size.width / 2f
+        val dotY = size.height - 4.dp.toPx()
+
+        // Arc 1 — innermost, strongest
+        val arc1 = Path().apply {
+            moveTo(cx - 28.dp.toPx(), dotY - 32.dp.toPx())
+            quadraticTo(cx, dotY - 52.dp.toPx(), cx + 28.dp.toPx(), dotY - 32.dp.toPx())
         }
-        Spacer(Modifier.height(16.dp))
-        Text("Ready to tap!", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text(
-            "Hold your phone near the payer's phone",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
+        drawPath(arc1, color = TapmeOrange, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round), alpha = alpha1)
+
+        // Arc 2 — middle
+        val arc2 = Path().apply {
+            moveTo(cx - 40.dp.toPx(), dotY - 18.dp.toPx())
+            quadraticTo(cx, dotY - 42.dp.toPx(), cx + 40.dp.toPx(), dotY - 18.dp.toPx())
+        }
+        drawPath(arc2, color = TapmeOrange, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round), alpha = alpha2)
+
+        // Arc 3 — outermost, faintest
+        val arc3 = Path().apply {
+            moveTo(cx - 54.dp.toPx(), dotY - 4.dp.toPx())
+            quadraticTo(cx, dotY - 30.dp.toPx(), cx + 54.dp.toPx(), dotY - 4.dp.toPx())
+        }
+        drawPath(arc3, color = TapmeOrange, style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round), alpha = alpha3)
+
+        // Dot glow halo
+        drawCircle(color = TapmeOrange, radius = 9.dp.toPx(), center = Offset(cx, dotY), alpha = 0.12f)
+        // Dot core
+        drawCircle(color = TapmeOrange, radius = 3.5.dp.toPx(), center = Offset(cx, dotY), alpha = 0.9f)
     }
 }
