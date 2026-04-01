@@ -2,7 +2,7 @@
 
 Tapme is an Android app for starting UPI payments with a tap. The receiver's phone emulates an NFC tag, the payer taps their phone, and Android attempts to hand off a native UPI payment flow. The app also shows the same payment session as a QR code and keeps a local transaction history.
 
-This repository is the opensource version of Tapme. The Android app currently matches the private v1.4.0 app behavior.
+<img width="1200" height="632" alt="image" src="https://github.com/user-attachments/assets/f4cd7637-876f-46ba-9770-65c3cef9ae47" />
 
 ## What The App Does
 
